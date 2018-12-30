@@ -68,7 +68,39 @@ class _MyHomePageState extends State<MyHomePage> {
       child: Padding(
         padding: EdgeInsets.all(16.0),
         child: Row(
-          children: <Widget>[],
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: <Widget>[
+            RoundIconButton.small(
+                icon: Icons.refresh,
+                iconColor: Colors.orange,
+                onPressed: () {
+                  // TODO(olivoil):
+                }),
+            RoundIconButton.large(
+                icon: Icons.clear,
+                iconColor: Colors.red,
+                onPressed: () {
+                  // TODO(olivoil):
+                }),
+            RoundIconButton.small(
+                icon: Icons.star,
+                iconColor: Colors.blue,
+                onPressed: () {
+                  // TODO(olivoil):
+                }),
+            RoundIconButton.large(
+                icon: Icons.favorite,
+                iconColor: Colors.green,
+                onPressed: () {
+                  // TODO(olivoil):
+                }),
+            RoundIconButton.small(
+                icon: Icons.lock,
+                iconColor: Colors.purple,
+                onPressed: () {
+                  // TODO(olivoil):
+                }),
+          ],
         ),
       ),
     );
@@ -93,7 +125,7 @@ class RoundIconButton extends StatelessWidget {
   RoundIconButton.small({this.icon, this.iconColor, this.onPressed})
       : size = 50.0;
 
-  final Icon icon;
+  final IconData icon;
   final Color iconColor;
   final double size;
   final VoidCallback onPressed;
@@ -114,7 +146,15 @@ class RoundIconButton extends StatelessWidget {
             )
           ],
         ),
-        child: RawMaterialButton(),
+        child: RawMaterialButton(
+          shape: CircleBorder(),
+          elevation: 0.0,
+          child: Icon(
+            icon,
+            color: iconColor,
+          ),
+          onPressed: onPressed,
+        ),
       ),
     );
   }

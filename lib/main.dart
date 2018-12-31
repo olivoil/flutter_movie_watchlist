@@ -1,5 +1,8 @@
+import 'dart:math';
+
 import 'package:flutter/material.dart';
 import 'package:rmdb_app/layout_overlays.dart';
+import 'package:transparent_image/transparent_image.dart';
 
 void main() => runApp(MyApp());
 
@@ -72,7 +75,7 @@ class _MyHomePageState extends State<MyHomePage> {
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: <Widget>[
             RoundIconButton.small(
-                icon: Icons.refresh,
+                icon: Icons.people,
                 iconColor: Colors.orange,
                 onPressed: () {
                   // TODO(olivoil): skip movie
@@ -84,7 +87,7 @@ class _MyHomePageState extends State<MyHomePage> {
                   // TODO(olivoil): dislike
                 }),
             RoundIconButton.small(
-                icon: Icons.star,
+                icon: Icons.comment,
                 iconColor: Colors.blue,
                 onPressed: () {
                   // TODO(olivoil): add to list
@@ -186,9 +189,15 @@ class MovieCard extends StatefulWidget {
 
 class _MovieCardState extends State<MovieCard> {
   Widget _buildBackground() {
-    return Image.asset(
-      'assets/poster.jpg',
-      fit: BoxFit.cover,
+    return PosterBrowser(
+      imageUrls: <String>[
+        'https://image.tmdb.org/t/p/w1280/uyJgTzAsp3Za2TaPiZt2yaKYRIR.jpg',
+        'https://image.tmdb.org/t/p/w1280/bXYjDmzSRkIu0ljs2MrwyvKe7er.jpg',
+        'https://image.tmdb.org/t/p/w1280/oBysFnbG7ZfbaApAMvU9TOru5O0.jpg',
+        'https://image.tmdb.org/t/p/w1280/zwVvMnqY55K01dzTjyWpYnorFE1.jpg',
+        'https://image.tmdb.org/t/p/w1280/4gY9Hy7LNmiiVFCMYzx7ZcP3z2W.jpg',
+      ],
+      visiblePhotoIndex: 0,
     );
   }
 
@@ -224,17 +233,16 @@ class _MovieCardState extends State<MovieCard> {
                       fontSize: 24.0,
                     ),
                   ),
-                  Text(
-                    'Gellert Grindelwald has escaped imprisonment and has begun gathering followers to his cause—elevating wizards above all non-magical beings. The only one capable of putting a stop to him is the wizard he once called his closest friend, Albus Dumbledore. However, Dumbledore will need to seek help from the wizard who had thwarted Grindelwald once before, his former student Newt Scamander, who agrees to help, unaware of the dangers that lie ahead. Lines are drawn as love and loyalty are tested, even among the truest friends and family, in an increasingly divided wizarding world.',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 12.0,
-                    ),
-                  ),
                 ],
               ),
             ),
-            Icon(Icons.info, color: Colors.white),
+            IconButton(
+              icon: Icon(Icons.info, color: Colors.white),
+              onPressed: () {
+                // TODO(olivoil): show synopsis
+              },
+            ),
+            // Icon(Icons.info, color: Colors.white),
           ],
         ),
       ),
@@ -267,6 +275,180 @@ class _MovieCardState extends State<MovieCard> {
             ),
           ),
         ),
+      ),
+    );
+  }
+}
+
+class PosterBrowser extends StatefulWidget {
+  PosterBrowser({Key key, this.imageUrls, this.visiblePhotoIndex})
+      : super(key: key);
+
+  final List<String> imageUrls;
+  final int visiblePhotoIndex;
+
+  @override
+  PosterBrowserState createState() {
+    return PosterBrowserState();
+  }
+}
+
+class PosterBrowserState extends State<PosterBrowser> {
+  int visiblePosterIndex;
+
+  @override
+  void initState() {
+    super.initState();
+    visiblePosterIndex = widget.visiblePhotoIndex;
+  }
+
+  @override
+  void didUpdateWidget(PosterBrowser oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.visiblePhotoIndex != oldWidget.visiblePhotoIndex) {
+      setState(() {
+        visiblePosterIndex = widget.visiblePhotoIndex;
+      });
+    }
+  }
+
+  void _prevImage() {
+    setState(() {
+      visiblePosterIndex = max(visiblePosterIndex - 1, 0);
+    });
+  }
+
+  void _nextImage() {
+    setState(() {
+      visiblePosterIndex =
+          min(visiblePosterIndex + 1, widget.imageUrls.length - 1);
+    });
+  }
+
+  Widget _buildPhotoControls() {
+    return Stack(
+      fit: StackFit.expand,
+      children: <Widget>[
+        GestureDetector(
+          onTap: _prevImage,
+          child: FractionallySizedBox(
+            widthFactor: 0.5,
+            heightFactor: 1.0,
+            alignment: Alignment.topLeft,
+            child: Container(
+              color: Colors.transparent,
+            ),
+          ),
+        ),
+        GestureDetector(
+          onTap: _nextImage,
+          child: FractionallySizedBox(
+            widthFactor: 0.5,
+            heightFactor: 1.0,
+            alignment: Alignment.topRight,
+            child: Container(
+              color: Colors.transparent,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildPhotoIndicator() {
+    return Positioned(
+      top: 0.0,
+      left: 0.0,
+      right: 0.0,
+      child: CarouselIndicator(
+        itemCount: widget.imageUrls.length,
+        visibleItemIndex: visiblePosterIndex,
+      ),
+    );
+  }
+
+  Widget _buildImage() {
+    return FadeInImage.memoryNetwork(
+      placeholder: kTransparentImage,
+      image: widget.imageUrls[visiblePosterIndex],
+      fit: BoxFit.cover,
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Stack(
+      fit: StackFit.expand,
+      children: <Widget>[
+        _buildImage(),
+        _buildPhotoIndicator(),
+        _buildPhotoControls(),
+      ],
+    );
+  }
+}
+
+class CarouselIndicator extends StatelessWidget {
+  CarouselIndicator({this.itemCount, this.visibleItemIndex});
+
+  final int itemCount;
+  final int visibleItemIndex;
+
+  Widget _buildActiveIndicator() {
+    return Expanded(
+      child: Padding(
+        padding: EdgeInsets.only(left: 2.0, right: 2.0),
+        child: Container(
+          height: 3.0,
+          decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(2.5),
+              boxShadow: <BoxShadow>[
+                BoxShadow(
+                  color: Color(0x22000000),
+                  spreadRadius: 0.0,
+                  blurRadius: 2.0,
+                  offset: Offset(0.0, 1.0),
+                ),
+              ]),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildInactiveIndicator() {
+    return Expanded(
+      child: Padding(
+        padding: EdgeInsets.only(left: 2.0, right: 2.0),
+        child: Container(
+          height: 3.0,
+          decoration: BoxDecoration(
+            color: Colors.black.withOpacity(0.2),
+            borderRadius: BorderRadius.circular(2.5),
+          ),
+        ),
+      ),
+    );
+  }
+
+  List<Widget> _buildIndicators() {
+    final List<Widget> indicators = <Widget>[];
+
+    for (int i = 0; i < itemCount; ++i) {
+      indicators.add(i == visibleItemIndex
+          ? _buildActiveIndicator()
+          : _buildInactiveIndicator());
+    }
+
+    return indicators;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: EdgeInsets.all(8.0),
+      child: Row(
+        children: _buildIndicators(),
       ),
     );
   }

@@ -98,7 +98,6 @@ class _OverlayBuilderState extends State<OverlayBuilder> {
     super.initState();
 
     if (widget.showOverlay) {
-      // showOverlay();
       WidgetsBinding.instance.addPostFrameCallback((_) => showOverlay());
     }
   }
@@ -106,14 +105,12 @@ class _OverlayBuilderState extends State<OverlayBuilder> {
   @override
   void didUpdateWidget(OverlayBuilder oldWidget) {
     super.didUpdateWidget(oldWidget);
-    // syncWidgetAndOverlay();
     WidgetsBinding.instance.addPostFrameCallback((_) => syncWidgetAndOverlay());
   }
 
   @override
   void reassemble() {
     super.reassemble();
-    // syncWidgetAndOverlay();
     WidgetsBinding.instance.addPostFrameCallback((_) => syncWidgetAndOverlay());
   }
 
@@ -161,7 +158,6 @@ class _OverlayBuilderState extends State<OverlayBuilder> {
   }
 
   Future<void> buildOverlay() async {
-    //overlayEntry?.markNeedsBuild();
     WidgetsBinding.instance
         .addPostFrameCallback((_) => overlayEntry?.markNeedsBuild());
   }

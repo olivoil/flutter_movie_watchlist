@@ -29,7 +29,7 @@ analyzer:
     # allow having TODOs in the code
     todo: ignore
     #
-    sdk_version_async_exported_from_core: ignore
+    # sdk_version_async_exported_from_core: ignore
   exclude:
     - "bin/cache/**"
     # the following two are relative to the stocks example and the flutter package respectively
@@ -49,7 +49,7 @@ linter:
     - always_specify_types
     - annotate_overrides
     # - avoid_annotating_with_dynamic # conflicts with always_specify_types
-    - avoid_as
+    # - avoid_as
     # - avoid_bool_literals_in_conditional_expressions # not yet tested
     # - avoid_catches_without_on_clauses # we do this commonly
     # - avoid_catching_errors # we do this commonly

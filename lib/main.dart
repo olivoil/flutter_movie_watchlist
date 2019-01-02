@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:rmdb_app/cards.dart';
+import 'package:rmdb_app/recommendations.dart';
 
 void main() => runApp(MyApp());
 
@@ -29,6 +30,8 @@ class MyHomePage extends StatefulWidget {
 }
 
 class _MyHomePageState extends State<MyHomePage> {
+  MovieRecommendation reco = MovieRecommendation();
+
   Widget _buildAppBar() {
     return AppBar(
       backgroundColor: Colors.transparent,
@@ -50,7 +53,7 @@ class _MyHomePageState extends State<MyHomePage> {
       actions: <Widget>[
         IconButton(
           icon: Icon(
-            Icons.chat_bubble,
+            Icons.search,
             color: Colors.grey,
             size: 40.0,
           ),
@@ -72,34 +75,34 @@ class _MyHomePageState extends State<MyHomePage> {
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: <Widget>[
             RoundIconButton.small(
-                icon: Icons.people,
+                icon: Icons.refresh,
                 iconColor: Colors.orange,
                 onPressed: () {
-                  // TODO(olivoil): skip movie
+                  // TODO(olivoil): undo last decision
                 }),
             RoundIconButton.large(
                 icon: Icons.thumb_down,
                 iconColor: Colors.red,
                 onPressed: () {
-                  // TODO(olivoil): dislike
+                  reco.dislike();
                 }),
             RoundIconButton.small(
-                icon: Icons.comment,
+                icon: Icons.watch_later,
                 iconColor: Colors.blue,
                 onPressed: () {
-                  // TODO(olivoil): add to list
+                  reco.watchLater();
                 }),
             RoundIconButton.large(
                 icon: Icons.favorite,
                 iconColor: Colors.green,
                 onPressed: () {
-                  // TODO(olivoil): like
+                  reco.like();
                 }),
             RoundIconButton.small(
-                icon: Icons.featured_video,
+                icon: Icons.rate_review,
                 iconColor: Colors.purple,
                 onPressed: () {
-                  // TODO(olivoil): watch trailer
+                  // TODO(olivoil): leave a detailed review
                 }),
           ],
         ),
@@ -111,7 +114,9 @@ class _MyHomePageState extends State<MyHomePage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: _buildAppBar(),
-      body: DraggableCard(),
+      body: DraggableCard(
+        reco: reco,
+      ),
       bottomNavigationBar: _buildBottomBar(),
     );
   }

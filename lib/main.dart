@@ -1,8 +1,17 @@
 import 'package:flutter/material.dart';
+
 import 'package:rmdb_app/cards.dart';
+import 'package:rmdb_app/models/movie.dart';
+import 'package:rmdb_app/models/mock.dart';
 import 'package:rmdb_app/recommendations.dart';
 
 void main() => runApp(MyApp());
+
+final RecommendationEngine recommendationEngine = RecommendationEngine(
+  recommendations: mockMovies().map((Movie movie) {
+    return MovieRecommendation(movie: movie);
+  }).toList(),
+);
 
 class MyApp extends StatelessWidget {
   // This widget is the root of your application.
@@ -30,8 +39,6 @@ class MyHomePage extends StatefulWidget {
 }
 
 class _MyHomePageState extends State<MyHomePage> {
-  MovieRecommendation reco = MovieRecommendation();
-
   Widget _buildAppBar() {
     return AppBar(
       backgroundColor: Colors.transparent,
@@ -84,19 +91,19 @@ class _MyHomePageState extends State<MyHomePage> {
                 icon: Icons.thumb_down,
                 iconColor: Colors.red,
                 onPressed: () {
-                  reco.dislike();
+                  recommendationEngine.currentMovieRecommendation.dislike();
                 }),
             RoundIconButton.small(
                 icon: Icons.watch_later,
                 iconColor: Colors.blue,
                 onPressed: () {
-                  reco.watchLater();
+                  recommendationEngine.currentMovieRecommendation.watchLater();
                 }),
             RoundIconButton.large(
                 icon: Icons.favorite,
                 iconColor: Colors.green,
                 onPressed: () {
-                  reco.like();
+                  recommendationEngine.currentMovieRecommendation.like();
                 }),
             RoundIconButton.small(
                 icon: Icons.rate_review,
@@ -114,8 +121,8 @@ class _MyHomePageState extends State<MyHomePage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: _buildAppBar(),
-      body: DraggableCard(
-        reco: reco,
+      body: CardStack(
+        engine: recommendationEngine,
       ),
       bottomNavigationBar: _buildBottomBar(),
     );

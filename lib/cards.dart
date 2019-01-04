@@ -4,12 +4,127 @@ import 'package:flutter/material.dart';
 
 import 'package:rmdb_app/layout_overlays.dart';
 import 'package:rmdb_app/media_browser.dart';
+import 'package:rmdb_app/models/movie.dart';
 import 'package:rmdb_app/recommendations.dart';
 
-class DraggableCard extends StatefulWidget {
-  DraggableCard({Key key, this.reco}) : super(key: key);
+class CardStack extends StatefulWidget {
+  final RecommendationEngine engine;
 
-  final MovieRecommendation reco;
+  CardStack({this.engine});
+
+  @override
+  _CardStackState createState() => _CardStackState();
+}
+
+class _CardStackState extends State<CardStack> {
+  MovieRecommendation _currentReco;
+  double _nextCardScale = 0.9;
+
+  @override
+  void initState() {
+    super.initState();
+    widget.engine.addListener(_onRecommendationEngineChange);
+    _currentReco = widget.engine.currentMovieRecommendation;
+
+    if (_currentReco != null) {
+      _currentReco.addListener(_onRecommendationChange);
+    }
+  }
+
+  @override
+  void didUpdateWidget(CardStack oldWidget) {
+    super.didUpdateWidget(oldWidget);
+
+    if (widget.engine != oldWidget.engine) {
+      oldWidget.engine.removeListener(_onRecommendationEngineChange);
+      widget.engine.addListener(_onRecommendationEngineChange);
+
+      _currentReco?.removeListener(_onRecommendationChange);
+      _currentReco = widget.engine.currentMovieRecommendation;
+      _currentReco?.addListener(_onRecommendationChange);
+    }
+  }
+
+  @override
+  void dispose() {
+    _currentReco?.removeListener(_onRecommendationChange);
+    widget.engine.removeListener(_onRecommendationEngineChange);
+
+    super.dispose();
+  }
+
+  void _onRecommendationEngineChange() {
+    setState(() {
+      if (_currentReco != null) {
+        _currentReco.removeListener(_onRecommendationChange);
+      }
+
+      _currentReco = widget.engine.currentMovieRecommendation;
+
+      if (_currentReco != null) {
+        _currentReco.addListener(_onRecommendationChange);
+      }
+    });
+  }
+
+  void _onRecommendationChange() {
+    setState(() {
+      // recommendation changed, re-render
+    });
+  }
+
+  Widget _buildBackCard() {
+    return Transform(
+      transform: Matrix4.identity()..scale(_nextCardScale, _nextCardScale),
+      alignment: Alignment.center,
+      child: Card(
+        movie: widget.engine.nextMovieRecommendation.movie,
+      ),
+    );
+  }
+
+  Widget _buildFrontCard() {
+    return Card(
+      movie: widget.engine.currentMovieRecommendation.movie,
+      // slideTo: null,
+      // onSlideUpdate: (double distance) {},
+      // onSlideOutComplete: (SlideDirection direction) {}
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Stack(
+      children: <Widget>[
+        DraggableCard(
+          isDraggable: false,
+          card: _buildBackCard(),
+        ),
+        DraggableCard(
+          card: _buildFrontCard(),
+        ),
+      ],
+    );
+  }
+}
+
+enum SlideDirection { left, right, up, down }
+
+class DraggableCard extends StatefulWidget {
+  final Widget card;
+  final bool isDraggable;
+  final SlideDirection slideTo;
+  final Function(double distance) onSlideUpdate;
+  final Function(SlideDirection direction) onSlideOutComplete;
+
+  DraggableCard({
+    Key key,
+    this.card,
+    this.isDraggable = true,
+    this.slideTo,
+    this.onSlideUpdate,
+    this.onSlideOutComplete,
+  }) : super(key: key);
 
   @override
   _DraggableCardState createState() => _DraggableCardState();
@@ -23,6 +138,7 @@ class _DraggableCardState extends State<DraggableCard>
   Offset dragStart;
   Offset dragPosition;
   Offset slideBackStart;
+  SlideDirection slideOutDirection;
   AnimationController slideBackAnimation;
   Tween<Offset> slideOutTween;
   AnimationController slideOutAnimation;
@@ -41,6 +157,10 @@ class _DraggableCardState extends State<DraggableCard>
               Offset(0.0, 0.0),
               Curves.elasticOut.transform(slideBackAnimation.value),
             );
+
+            if (widget.onSlideUpdate != null) {
+              widget.onSlideUpdate(cardOffset.distance);
+            }
           }))
       ..addStatusListener((AnimationStatus status) {
         if (status == AnimationStatus.completed) {
@@ -58,6 +178,10 @@ class _DraggableCardState extends State<DraggableCard>
     )
       ..addListener(() => setState(() {
             cardOffset = slideOutTween.evaluate(slideOutAnimation);
+
+            if (widget.onSlideUpdate != null) {
+              widget.onSlideUpdate(cardOffset.distance);
+            }
           }))
       ..addStatusListener((AnimationStatus status) {
         if (status == AnimationStatus.completed) {
@@ -66,55 +190,41 @@ class _DraggableCardState extends State<DraggableCard>
             slideOutTween = null;
             dragPosition = null;
             // TODO(olivoil): switch to next card in stack
-            cardOffset = Offset(0.0, 0.0);
-            widget.reco.reset();
+
+            if (widget.onSlideOutComplete != null) {
+              widget.onSlideOutComplete(slideOutDirection);
+            }
           });
         }
       });
-
-    widget.reco.addListener(_onRecommendationChange);
-    decision = widget.reco.decision;
   }
 
   @override
   void didUpdateWidget(DraggableCard oldWidget) {
     super.didUpdateWidget(oldWidget);
 
-    if (widget.reco != oldWidget.reco) {
-      oldWidget.reco.removeListener(_onRecommendationChange);
-      widget.reco.addListener(_onRecommendationChange);
-      decision = widget.reco.decision;
+    if (oldWidget.slideTo == null && widget.slideTo != null) {
+      switch (widget.slideTo) {
+        case SlideDirection.up:
+          _slideUp();
+          break;
+        case SlideDirection.right:
+          _slideRight();
+          break;
+        case SlideDirection.down:
+          _slideDown();
+          break;
+        case SlideDirection.left:
+          _slideLeft();
+          break;
+      }
     }
   }
 
   @override
   void dispose() {
     slideBackAnimation.dispose();
-    widget.reco.removeListener(_onRecommendationChange);
     super.dispose();
-  }
-
-  void _onRecommendationChange() {
-    if (widget.reco.decision != decision) {
-      switch (widget.reco.decision) {
-        case Decision.dislike:
-          _slideLeft();
-          break;
-        case Decision.like:
-          _slideRight();
-          break;
-        case Decision.watchLater:
-          _slideDown();
-          break;
-        case Decision.skip:
-          _slideUp();
-          break;
-        default:
-          break;
-      }
-    }
-
-    decision = widget.reco.decision;
   }
 
   Offset _chooseRandomDragStart() {
@@ -165,6 +275,10 @@ class _DraggableCardState extends State<DraggableCard>
   }
 
   void _onPanStart(DragStartDetails details) {
+    if (!widget.isDraggable) {
+      return;
+    }
+
     dragStart = details.globalPosition;
 
     if (slideBackAnimation.isAnimating) {
@@ -173,13 +287,25 @@ class _DraggableCardState extends State<DraggableCard>
   }
 
   void _onPanUpdate(DragUpdateDetails details) {
+    if (!widget.isDraggable) {
+      return;
+    }
+
     setState(() {
       dragPosition = details.globalPosition;
       cardOffset = dragPosition - dragStart;
     });
+
+    if (widget.onSlideUpdate != null) {
+      widget.onSlideUpdate(cardOffset.distance);
+    }
   }
 
   void _onPanEnd(DragEndDetails details) {
+    if (!widget.isDraggable) {
+      return;
+    }
+
     final Offset dragVector = cardOffset / cardOffset.distance;
 
     final double xOffset = cardOffset.dx / context.size.width;
@@ -195,10 +321,16 @@ class _DraggableCardState extends State<DraggableCard>
         slideOutTween = Tween<Offset>(
             begin: cardOffset, end: dragVector * (2 * context.size.width));
         slideOutAnimation.forward(from: 0.0);
+
+        slideOutDirection =
+            isInLeftRegion ? SlideDirection.left : SlideDirection.right;
       } else if (isInTopRegion || isInBottomRegion) {
         slideOutTween = Tween<Offset>(
             begin: cardOffset, end: dragVector * (2 * context.size.height));
         slideOutAnimation.forward(from: 0.0);
+
+        slideOutDirection =
+            isInTopRegion ? SlideDirection.up : SlideDirection.down;
       } else {
         slideBackStart = cardOffset;
         slideBackAnimation.forward(from: 0.0);
@@ -249,7 +381,7 @@ class _DraggableCardState extends State<DraggableCard>
                 onPanStart: _onPanStart,
                 onPanUpdate: _onPanUpdate,
                 onPanEnd: _onPanEnd,
-                child: Card(),
+                child: widget.card,
               ),
             ),
           ),
@@ -260,6 +392,10 @@ class _DraggableCardState extends State<DraggableCard>
 }
 
 class Card extends StatefulWidget {
+  final Movie movie;
+
+  Card({Key key, this.movie}) : super(key: key);
+
   @override
   _CardState createState() => _CardState();
 }
@@ -267,13 +403,7 @@ class Card extends StatefulWidget {
 class _CardState extends State<Card> {
   Widget _buildBackground() {
     return PosterBrowser(
-      imageUrls: <String>[
-        'https://image.tmdb.org/t/p/w1280/uyJgTzAsp3Za2TaPiZt2yaKYRIR.jpg',
-        'https://image.tmdb.org/t/p/w1280/bXYjDmzSRkIu0ljs2MrwyvKe7er.jpg',
-        'https://image.tmdb.org/t/p/w1280/oBysFnbG7ZfbaApAMvU9TOru5O0.jpg',
-        'https://image.tmdb.org/t/p/w1280/zwVvMnqY55K01dzTjyWpYnorFE1.jpg',
-        'https://image.tmdb.org/t/p/w1280/4gY9Hy7LNmiiVFCMYzx7ZcP3z2W.jpg',
-      ],
+      imageUrls: widget.movie.imageUrls.sublist(0, 5),
       visiblePhotoIndex: 0,
     );
   }
@@ -304,7 +434,7 @@ class _CardState extends State<Card> {
                 mainAxisSize: MainAxisSize.min,
                 children: <Widget>[
                   Text(
-                    'Fantastic Beasts: The Crimes of Grindelwald',
+                    widget.movie.title,
                     style: TextStyle(
                       color: Colors.white,
                       fontSize: 24.0,

@@ -17,6 +17,7 @@ class CardStack extends StatefulWidget {
 }
 
 class _CardStackState extends State<CardStack> {
+  Key _frontCard;
   MovieRecommendation _currentReco;
   double _nextCardScale = 0.9;
 
@@ -29,6 +30,8 @@ class _CardStackState extends State<CardStack> {
     if (_currentReco != null) {
       _currentReco.addListener(_onRecommendationChange);
     }
+
+    _frontCard = Key('${_currentReco.movie.id}');
   }
 
   @override
@@ -64,6 +67,8 @@ class _CardStackState extends State<CardStack> {
       if (_currentReco != null) {
         _currentReco.addListener(_onRecommendationChange);
       }
+
+      _frontCard = Key('${_currentReco.movie.id}');
     });
   }
 
@@ -85,11 +90,49 @@ class _CardStackState extends State<CardStack> {
 
   Widget _buildFrontCard() {
     return Card(
+      key: _frontCard,
       movie: widget.engine.currentMovieRecommendation.movie,
-      // slideTo: null,
-      // onSlideUpdate: (double distance) {},
-      // onSlideOutComplete: (SlideDirection direction) {}
     );
+  }
+
+  void _onSlideUpdate(double distance) {
+    setState(() {
+      _nextCardScale = 0.9 + (0.1 * (distance / 100.0)).clamp(0.0, 0.1);
+    });
+  }
+
+  void _onSlideOutComplete(SlideDirection direction) {
+    switch (direction) {
+      case SlideDirection.up:
+        widget.engine.currentMovieRecommendation.skip();
+        break;
+      case SlideDirection.right:
+        widget.engine.currentMovieRecommendation.like();
+        break;
+      case SlideDirection.down:
+        widget.engine.currentMovieRecommendation.watchLater();
+        break;
+      case SlideDirection.left:
+        widget.engine.currentMovieRecommendation.dislike();
+        break;
+    }
+
+    widget.engine.cycleRecomendation();
+  }
+
+  SlideDirection _desiredSlideOutDirection() {
+    switch (widget.engine.currentMovieRecommendation.decision) {
+      case Decision.skip:
+        return SlideDirection.up;
+      case Decision.like:
+        return SlideDirection.right;
+      case Decision.watchLater:
+        return SlideDirection.down;
+      case Decision.dislike:
+        return SlideDirection.left;
+      default:
+        return null;
+    }
   }
 
   @override
@@ -97,11 +140,14 @@ class _CardStackState extends State<CardStack> {
     return Stack(
       children: <Widget>[
         DraggableCard(
-          isDraggable: false,
           card: _buildBackCard(),
+          isDraggable: false,
         ),
         DraggableCard(
           card: _buildFrontCard(),
+          slideTo: _desiredSlideOutDirection(),
+          onSlideUpdate: _onSlideUpdate,
+          onSlideOutComplete: _onSlideOutComplete,
         ),
       ],
     );
@@ -203,6 +249,10 @@ class _DraggableCardState extends State<DraggableCard>
   void didUpdateWidget(DraggableCard oldWidget) {
     super.didUpdateWidget(oldWidget);
 
+    if (widget.card.key != oldWidget.card.key) {
+      cardOffset = Offset(0.0, 0.0);
+    }
+
     if (oldWidget.slideTo == null && widget.slideTo != null) {
       switch (widget.slideTo) {
         case SlideDirection.up:
@@ -242,36 +292,44 @@ class _DraggableCardState extends State<DraggableCard>
     return Offset(dragStartX, dragStartY);
   }
 
-  void _slideLeft() {
-    final double screenWidth = context.size.width;
-    dragStart = _chooseRandomDragStart();
-    slideOutTween =
-        Tween<Offset>(begin: cardOffset, end: Offset(-2 * screenWidth, 0.0));
-    slideOutAnimation.forward(from: 0.0);
+  void _slideUp() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final double screenHeight = context.size.height;
+      dragStart = _chooseRandomDragStart();
+      slideOutTween =
+          Tween<Offset>(begin: cardOffset, end: Offset(0.0, -2 * screenHeight));
+      slideOutAnimation.forward(from: 0.0);
+    });
   }
 
   void _slideRight() {
-    final double screenWidth = context.size.width;
-    dragStart = _chooseRandomDragStart();
-    slideOutTween =
-        Tween<Offset>(begin: cardOffset, end: Offset(2 * screenWidth, 0.0));
-    slideOutAnimation.forward(from: 0.0);
-  }
-
-  void _slideUp() {
-    final double screenHeight = context.size.height;
-    dragStart = _chooseRandomDragStart();
-    slideOutTween =
-        Tween<Offset>(begin: cardOffset, end: Offset(0.0, -2 * screenHeight));
-    slideOutAnimation.forward(from: 0.0);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final double screenWidth = context.size.width;
+      dragStart = _chooseRandomDragStart();
+      slideOutTween =
+          Tween<Offset>(begin: cardOffset, end: Offset(2 * screenWidth, 0.0));
+      slideOutAnimation.forward(from: 0.0);
+    });
   }
 
   void _slideDown() {
-    final double screenHeight = context.size.height;
-    dragStart = _chooseRandomDragStart();
-    slideOutTween =
-        Tween<Offset>(begin: cardOffset, end: Offset(0.0, 2 * screenHeight));
-    slideOutAnimation.forward(from: 0.0);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final double screenHeight = context.size.height;
+      dragStart = _chooseRandomDragStart();
+      slideOutTween =
+          Tween<Offset>(begin: cardOffset, end: Offset(0.0, 2 * screenHeight));
+      slideOutAnimation.forward(from: 0.0);
+    });
+  }
+
+  void _slideLeft() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final double screenWidth = context.size.width;
+      dragStart = _chooseRandomDragStart();
+      slideOutTween =
+          Tween<Offset>(begin: cardOffset, end: Offset(-2 * screenWidth, 0.0));
+      slideOutAnimation.forward(from: 0.0);
+    });
   }
 
   void _onPanStart(DragStartDetails details) {
